@@ -2,10 +2,10 @@ const { Plugin } = require('obsidian');
 const { StateField, StateEffect } = require('@codemirror/state');
 const { EditorView, Decoration } = require('@codemirror/view');
 
-// Эффект для динамического обновления подсветки
+// Effect for dynamically updating highlights
 const setHighlights = StateEffect.define();
 
-// Поле состояния для хранения и применения декораций
+// State field for storing and applying decorations
 const highlightField = StateField.define({
   create() {
     return Decoration.none;
@@ -22,9 +22,9 @@ const highlightField = StateField.define({
 
 module.exports = class HighlightMatchesPlugin extends Plugin {
   async onload() {
-    console.log('Загрузка плагина подсветки совпадений...');
+    console.log('Loading highlight matches plugin...');
 
-    // Регистрируем расширения в редакторе Obsidian
+    // Register editor extensions in Obsidian
     this.registerEditorExtension([
       highlightField,
       this.createHighlightExtension()
@@ -32,27 +32,27 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
   }
 
   onunload() {
-    console.log('Выгрузка плагина подсветки совпадений.');
+    console.log('Unloading highlight matches plugin.');
   }
 
   createHighlightExtension() {
     return EditorView.updateListener.of((update) => {
-      // Срабатывает только при изменении выделения или редактировании текста
+      // Only trigger on selection change or text editing
       if (!update.selectionSet && !update.docChanged) return;
 
       const state = update.state;
       const selection = state.selection.main;
 
-      // Если ничего не выделено — убираем подсветку
+      // If nothing is selected — clear highlights
       if (selection.empty) {
         update.view.dispatch({ effects: setHighlights.of(Decoration.none) });
         return;
       }
 
-      // Получаем выделенный фрагмент текста
+      // Get the selected text fragment
       const selectedText = state.sliceDoc(selection.from, selection.to).trim();
 
-      // Не подсвечиваем одиночные символы или пробелы
+      // Don't highlight single characters or whitespace
       if (selectedText.length < 2) {
         update.view.dispatch({ effects: setHighlights.of(Decoration.none) });
         return;
@@ -61,7 +61,7 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
       const decorations = [];
       const docText = state.doc.toString();
       
-      // Поиск всех совпадений в документе
+      // Find all matches in the document
       let pos = docText.indexOf(selectedText);
       while (pos !== -1) {
         decorations.push(
@@ -70,7 +70,7 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
         pos = docText.indexOf(selectedText, pos + 1);
       }
 
-      // Формируем набор декораций и обновляем состояние редактора
+      // Build the decoration set and update editor state
       const decorationSet = Decoration.set(decorations, true);
       update.view.dispatch({ effects: setHighlights.of(decorationSet) });
     });

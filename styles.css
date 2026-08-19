@@ -1,6 +1,6 @@
-/* Класс для подсветки найденных совпадений */
+/* Class for highlighting matched text */
 .cm-match-highlight {
-  background-color: rgba(255, 215, 0, 0.3); /* Полупрозрачный желтый */
+  background-color: rgba(255, 215, 0, 0.3); /* Semi-transparent yellow */
   border-bottom: 2px solid gold;
   border-radius: 2px;
 }
