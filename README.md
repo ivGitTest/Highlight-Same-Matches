@@ -4,7 +4,7 @@ An Obsidian plugin that automatically highlights every occurrence of your select
 
 ## Demo
 
-<!-- TODO: add gif here -->
+![demo](media/demo.gif)
 
 ## How it works
 
