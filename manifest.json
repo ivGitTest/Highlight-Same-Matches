@@ -1,0 +1,10 @@
+{
+  "id": "obsidian-highlight-matches",
+  "name": "Highlight Same Matches",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Plugin for Obsidian. Highlights all occurrences of the selected text in the current note, similar to Notepad++.",
+  "author": "Ivan Rybakov",
+  "authorUrl": "https://github.com/ivGitTest/Highlight-Same-Matches",
+  "isDesktopOnly": false
+}

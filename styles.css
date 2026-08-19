@@ -1,0 +1,6 @@
+/* Класс для подсветки найденных совпадений */
+.cm-match-highlight {
+  background-color: rgba(255, 215, 0, 0.3); /* Полупрозрачный желтый */
+  border-bottom: 2px solid gold;
+  border-radius: 2px;
+}
