@@ -24,12 +24,31 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
   async onload() {
     console.log('Loading highlight matches plugin...');
     this.domHighlights = [];
+    this.activeView = null;
 
     // Register editor extensions in Obsidian
     this.registerEditorExtension([
       highlightField,
       this.createHighlightExtension()
     ]);
+
+    // Live Preview tables can own the browser selection without emitting a
+    // regular CodeMirror selection update. Listen to that selection too.
+    this.registerDomEvent(document, 'selectionchange', () => {
+      const view = this.activeView;
+      const browserSelection = window.getSelection();
+      const anchor = browserSelection?.anchorNode;
+      const selectedText = browserSelection?.toString().trim();
+
+      if (!view || !anchor || !selectedText || !view.dom.contains(anchor)) return;
+
+      const inTable = anchor.parentElement?.closest('table, .cm-table-widget');
+      if (!inTable) return;
+
+      window.requestAnimationFrame(() => {
+        this.highlightTableWidgets(view, selectedText);
+      });
+    });
   }
 
   onunload() {
@@ -54,7 +73,7 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
     this.clearDomHighlights();
     if (!selectedText) return;
 
-    const widgets = view.dom.querySelectorAll('.cm-table-widget');
+    const widgets = view.dom.querySelectorAll('table, .cm-table-widget');
     for (const widget of widgets) {
       const walker = document.createTreeWalker(widget, NodeFilter.SHOW_TEXT);
       const textNodes = [];
@@ -99,6 +118,7 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
 
       const state = update.state;
       const selection = state.selection.main;
+      this.activeView = update.view;
 
       // If nothing is selected — clear highlights
       if (selection.empty) {
@@ -133,10 +153,11 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
       const decorationSet = Decoration.set(decorations, true);
       update.view.dispatch({ effects: setHighlights.of(decorationSet) });
 
-      // In Live Preview, table cells are rendered by a DOM widget rather
-      // than by the source text decorations above. Highlight those visible
-      // cells as well.
-      this.highlightTableWidgets(update.view, selectedText);
+      // In Live Preview, tables are rendered after the CodeMirror update.
+      // Wait one frame so the visible table DOM is ready.
+      window.requestAnimationFrame(() => {
+        this.highlightTableWidgets(update.view, selectedText);
+      });
     });
   }
 };
