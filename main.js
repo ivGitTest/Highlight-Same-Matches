@@ -44,6 +44,11 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
       const selectedText = browserSelection?.toString().trim();
 
       if (!view) return;
+      // Adding source decorations can cause a selectionchange event with an
+      // empty browser selection. Do not treat that internal event as a user
+      // request to clear the active search.
+      if (!selectedText && this.activeHighlightText) return;
+
       if (
         !anchor ||
         !selectedText ||
@@ -209,6 +214,10 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
     return EditorView.updateListener.of((update) => {
       this.activeView = update.view;
 
+      const isHighlightUpdate = update.transactions.some((transaction) =>
+        transaction.effects.some((effect) => effect.is(setHighlights))
+      );
+
       // Obsidian virtualizes rendered Markdown. Apply the active search again
       // when scrolling exposes a new part of a table.
       if (!update.selectionSet && !update.docChanged) {
@@ -226,6 +235,11 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
 
       // If nothing is selected — clear highlights
       if (selection.empty) {
+        // A table selection is not represented in CodeMirror's selection.
+        // The update caused by applySourceHighlights is internal and must not
+        // clear the search we just applied.
+        if (isHighlightUpdate && this.activeHighlightText) return;
+
         this.activeHighlightText = null;
         this.clearDomHighlights();
         update.view.dispatch({ effects: setHighlights.of(Decoration.none) });
