@@ -1,9 +1,10 @@
 const { Plugin, PluginSettingTab, Setting } = require('obsidian');
 const { StateField, StateEffect } = require('@codemirror/state');
-const { EditorView, Decoration } = require('@codemirror/view');
+const { EditorView, Decoration, ViewPlugin } = require('@codemirror/view');
 
 const DEFAULT_SETTINGS = {
-  highlightColor: '#FFD700'
+  highlightColor: '#FFD700',
+  highlightWordsOnly: true
 };
 
 // Effect for dynamically updating highlights
@@ -28,6 +29,7 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
   async onload() {
     console.log('Loading highlight matches plugin...');
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.editorViews = new Set();
     this.applyHighlightColor();
     this.addSettingTab(new HighlightMatchesSettingTab(this.app, this));
 
@@ -59,44 +61,67 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
     await this.saveData(this.settings);
   }
 
+  async setHighlightWordsOnly(value) {
+    this.settings.highlightWordsOnly = value;
+    await this.saveData(this.settings);
+    for (const view of this.editorViews) {
+      this.updateHighlights(view);
+    }
+  }
+
   createHighlightExtension() {
-    return EditorView.updateListener.of((update) => {
-      // Only trigger on selection change or text editing
-      if (!update.selectionSet && !update.docChanged) return;
+    return ViewPlugin.define((view) => {
+      this.editorViews.add(view);
 
-      const state = update.state;
-      const selection = state.selection.main;
+      return {
+        update: (update) => {
+          if (update.selectionSet || update.docChanged) {
+            this.updateHighlights(update.view);
+          }
+        },
+        destroy: () => {
+          this.editorViews.delete(view);
+        }
+      };
+    });
+  }
 
-      // If nothing is selected — clear highlights
-      if (selection.empty) {
-        update.view.dispatch({ effects: setHighlights.of(Decoration.none) });
-        return;
-      }
+  updateHighlights(view) {
+    const state = view.state;
+    const selection = state.selection.main;
 
-      // Get the selected text fragment
-      const selectedText = state.sliceDoc(selection.from, selection.to).trim();
+    if (selection.empty) {
+      view.dispatch({ effects: setHighlights.of(Decoration.none) });
+      return;
+    }
 
-      // Don't highlight single characters or whitespace
-      if (selectedText.length < 2) {
-        update.view.dispatch({ effects: setHighlights.of(Decoration.none) });
-        return;
-      }
+    const selectedText = state.sliceDoc(selection.from, selection.to).trim();
+    if (selectedText.length < 2) {
+      view.dispatch({ effects: setHighlights.of(Decoration.none) });
+      return;
+    }
 
-      const decorations = [];
-      const docText = state.doc.toString();
+    const docText = state.doc.toString();
+    const decorations = [];
+    let pos = docText.indexOf(selectedText);
 
-      // Find all matches in the document
-      let pos = docText.indexOf(selectedText);
-      while (pos !== -1) {
+    while (pos !== -1) {
+      if (
+        !this.settings.highlightWordsOnly ||
+        isWholeWordMatch(docText, selectedText, pos)
+      ) {
         decorations.push(
-          Decoration.mark({ class: 'cm-match-highlight' }).range(pos, pos + selectedText.length)
+          Decoration.mark({ class: 'cm-match-highlight' }).range(
+            pos,
+            pos + selectedText.length
+          )
         );
-        pos = docText.indexOf(selectedText, pos + 1);
       }
+      pos = docText.indexOf(selectedText, pos + 1);
+    }
 
-      // Build the decoration set and update editor state
-      const decorationSet = Decoration.set(decorations, true);
-      update.view.dispatch({ effects: setHighlights.of(decorationSet) });
+    view.dispatch({
+      effects: setHighlights.of(Decoration.set(decorations, true))
     });
   }
 };
@@ -121,7 +146,30 @@ class HighlightMatchesSettingTab extends PluginSettingTab {
             await this.plugin.setHighlightColor(value);
           });
       });
+
+    new Setting(containerEl)
+      .setName('Highlight words only')
+      .setDesc('Highlight complete words instead of matching text fragments.')
+      .addToggle((toggle) => {
+        toggle
+          .setValue(this.plugin.settings.highlightWordsOnly)
+          .onChange(async (value) => {
+            await this.plugin.setHighlightWordsOnly(value);
+          });
+      });
   }
+}
+
+function isWholeWordMatch(docText, selectedText, position) {
+  const selectedStartsWithLetter = /^\p{L}/u.test(selectedText);
+  const selectedEndsWithLetter = /\p{L}$/u.test(selectedText);
+  const textBefore = docText.slice(0, position);
+  const textAfter = docText.slice(position + selectedText.length);
+
+  return (
+    (!selectedStartsWithLetter || !/\p{L}$/u.test(textBefore)) &&
+    (!selectedEndsWithLetter || !/^\p{L}/u.test(textAfter))
+  );
 }
 
 function hexToRgba(hex, alpha) {

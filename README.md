@@ -8,7 +8,9 @@ An Obsidian plugin that automatically highlights every occurrence of your select
 
 ## How it works
 
-Select any word or phrase and all matching text instantly lights up with a colored highlight. Deselect — and the highlights vanish. No commands or hotkeys are required.
+Select any word or phrase and matching text instantly lights up with a colored
+highlight. Deselect — and the highlights vanish. No commands or hotkeys are
+required.
 
 - Real-time highlighting on selection change or text editing
 - Ignores single characters and whitespace to keep things clean
@@ -16,10 +18,21 @@ Select any word or phrase and all matching text instantly lights up with a color
 
 ## Settings
 
-Open **Settings → Community plugins → Highlight Same Matches** to choose the
-highlight color with the built-in color picker. The default color is yellow
-(`#FFD700`). Your selected color is saved automatically and restored after
-reopening Obsidian or the note.
+Open **Settings → Community plugins → Highlight Same Matches** to customize
+highlighting:
+
+- **Highlight color** — choose a color with the built-in color picker. The
+  default color is yellow (`#FFD700`), and the selected color is saved
+  automatically.
+- **Highlight words only** — enabled by default. When enabled, only complete
+  words are highlighted. A word is a continuous sequence of letters; spaces,
+  punctuation, and special characters separate words. For example, selecting
+  `we` highlights `we` and the `we` in `we are`, but not the fragment inside
+  `wealth`. It also treats `we-are` and `we/are` as separate words.
+
+Disable **Highlight words only** to highlight the selected fragment wherever it
+appears, including inside larger words such as `wealth`. Settings are restored
+after restarting Obsidian or reopening a note.
 
 ## Limitations
 
