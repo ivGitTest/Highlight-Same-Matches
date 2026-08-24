@@ -1,7 +1,7 @@
 {
   "id": "highlight-matches",
   "name": "Highlight Same Matches",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "minAppVersion": "1.0.0",
   "description": "Highlights all occurrences of the selected text in the current note, similar to Notepad++.",
   "author": "Ivan Rybakov",

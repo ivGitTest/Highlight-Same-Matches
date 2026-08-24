@@ -1,6 +1,10 @@
-const { Plugin } = require('obsidian');
+const { Plugin, PluginSettingTab, Setting } = require('obsidian');
 const { StateField, StateEffect } = require('@codemirror/state');
 const { EditorView, Decoration } = require('@codemirror/view');
+
+const DEFAULT_SETTINGS = {
+  highlightColor: '#FFD700'
+};
 
 // Effect for dynamically updating highlights
 const setHighlights = StateEffect.define();
@@ -23,6 +27,9 @@ const highlightField = StateField.define({
 module.exports = class HighlightMatchesPlugin extends Plugin {
   async onload() {
     console.log('Loading highlight matches plugin...');
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.applyHighlightColor();
+    this.addSettingTab(new HighlightMatchesSettingTab(this.app, this));
 
     // Register editor extensions in Obsidian
     this.registerEditorExtension([
@@ -32,7 +39,24 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
   }
 
   onunload() {
+    document.body?.style.removeProperty('--highlight-matches-color');
+    document.body?.style.removeProperty('--highlight-matches-background');
     console.log('Unloading highlight matches plugin.');
+  }
+
+  applyHighlightColor() {
+    const color = this.settings.highlightColor;
+    document.body?.style.setProperty('--highlight-matches-color', color);
+    document.body?.style.setProperty(
+      '--highlight-matches-background',
+      hexToRgba(color, 0.3)
+    );
+  }
+
+  async setHighlightColor(color) {
+    this.settings.highlightColor = color;
+    this.applyHighlightColor();
+    await this.saveData(this.settings);
   }
 
   createHighlightExtension() {
@@ -76,3 +100,42 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
     });
   }
 };
+
+class HighlightMatchesSettingTab extends PluginSettingTab {
+  constructor(app, plugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
+
+    new Setting(containerEl)
+      .setName('Highlight color')
+      .setDesc('Choose the color used for matching text.')
+      .addColorPicker((colorPicker) => {
+        colorPicker
+          .setValue(this.plugin.settings.highlightColor)
+          .onChange(async (value) => {
+            await this.plugin.setHighlightColor(value);
+          });
+      });
+  }
+}
+
+function hexToRgba(hex, alpha) {
+  const normalized = hex.replace('#', '');
+  const value = normalized.length === 3
+    ? normalized.split('').map((part) => part + part).join('')
+    : normalized;
+  const red = Number.parseInt(value.slice(0, 2), 16);
+  const green = Number.parseInt(value.slice(2, 4), 16);
+  const blue = Number.parseInt(value.slice(4, 6), 16);
+
+  if ([red, green, blue].some((channel) => Number.isNaN(channel))) {
+    return `rgba(255, 215, 0, ${alpha})`;
+  }
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}

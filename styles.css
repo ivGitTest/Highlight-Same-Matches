@@ -1,6 +1,10 @@
 /* Class for highlighting matched text */
 .cm-match-highlight {
-  background-color: rgba(255, 215, 0, 0.3); /* Semi-transparent yellow */
-  border-bottom: 2px solid gold;
+  background-color: var(
+    --highlight-matches-background,
+    rgba(255, 215, 0, 0.3)
+  );
+  border-bottom: 2px solid
+    var(--highlight-matches-color, #ffd700);
   border-radius: 2px;
 }
