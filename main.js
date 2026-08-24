@@ -27,6 +27,7 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
     this.activeView = null;
     this.domHighlightFrame = null;
     this.cssHighlightName = 'highlight-same-matches';
+    this.activeHighlightText = null;
 
     // Register editor extensions in Obsidian
     this.registerEditorExtension([
@@ -49,6 +50,7 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
         selectedText.length < 2 ||
         !view.dom.contains(anchor)
       ) {
+        this.activeHighlightText = null;
         this.clearDomHighlights();
         if (view.dom.isConnected) {
           view.dispatch({ effects: setHighlights.of(Decoration.none) });
@@ -56,6 +58,7 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
         return;
       }
 
+      this.activeHighlightText = selectedText;
       this.applySourceHighlights(view, selectedText);
       this.scheduleVisibleHighlights(view, selectedText);
     });
@@ -206,14 +209,24 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
     return EditorView.updateListener.of((update) => {
       this.activeView = update.view;
 
-      // Only trigger on selection change or text editing
-      if (!update.selectionSet && !update.docChanged) return;
+      // Obsidian virtualizes rendered Markdown. Apply the active search again
+      // when scrolling exposes a new part of a table.
+      if (!update.selectionSet && !update.docChanged) {
+        if (update.viewportChanged && this.activeHighlightText) {
+          this.scheduleVisibleHighlights(
+            update.view,
+            this.activeHighlightText
+          );
+        }
+        return;
+      }
 
       const state = update.state;
       const selection = state.selection.main;
 
       // If nothing is selected — clear highlights
       if (selection.empty) {
+        this.activeHighlightText = null;
         this.clearDomHighlights();
         update.view.dispatch({ effects: setHighlights.of(Decoration.none) });
         return;
@@ -224,10 +237,13 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
 
       // Don't highlight single characters or whitespace
       if (selectedText.length < 2) {
+        this.activeHighlightText = null;
         this.clearDomHighlights();
         update.view.dispatch({ effects: setHighlights.of(Decoration.none) });
         return;
       }
+
+      this.activeHighlightText = selectedText;
 
       // Search the complete source document, including text outside
       // rendered table cells.
