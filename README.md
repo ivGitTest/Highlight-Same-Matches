@@ -18,9 +18,9 @@ Select any word or phrase and all matching text instantly lights up with a golde
 
 ### From Community Plugins
 
-1. Open Obsidian Settings → Community Plugins
-2. Search for **Highlight Same Matches**
-3. Install and enable the plugin
+1. Open Obsidian Settings → Community Plugins;
+2. Search for **Highlight Same Matches**;
+3. Install and enable the plugin;
 
 ### Manual
 
