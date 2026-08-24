@@ -4,7 +4,15 @@ An Obsidian plugin that automatically highlights every occurrence of your select
 
 ## Demo
 
+### Color setting
+
 ![demo](media/demo.gif)
+
+---
+
+### Highlight setting
+
+![demo2](media/demo2.gif)
 
 ## How it works
 
