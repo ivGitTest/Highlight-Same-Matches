@@ -50,9 +50,13 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
         !view.dom.contains(anchor)
       ) {
         this.clearDomHighlights();
+        if (view.dom.isConnected) {
+          view.dispatch({ effects: setHighlights.of(Decoration.none) });
+        }
         return;
       }
 
+      this.applySourceHighlights(view, selectedText);
       this.scheduleVisibleHighlights(view, selectedText);
     });
   }
@@ -173,6 +177,31 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
     });
   }
 
+  applySourceHighlights(view, selectedText) {
+    if (!selectedText || selectedText.length < 2) {
+      view.dispatch({ effects: setHighlights.of(Decoration.none) });
+      return;
+    }
+
+    const decorations = [];
+    const docText = view.state.doc.toString();
+    let pos = docText.indexOf(selectedText);
+
+    while (pos !== -1) {
+      decorations.push(
+        Decoration.mark({ class: 'cm-match-highlight' }).range(
+          pos,
+          pos + selectedText.length
+        )
+      );
+      pos = docText.indexOf(selectedText, pos + 1);
+    }
+
+    view.dispatch({
+      effects: setHighlights.of(Decoration.set(decorations, true))
+    });
+  }
+
   createHighlightExtension() {
     return EditorView.updateListener.of((update) => {
       this.activeView = update.view;
@@ -200,21 +229,9 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
         return;
       }
 
-      const decorations = [];
-      const docText = state.doc.toString();
-      
-      // Find all matches in the document
-      let pos = docText.indexOf(selectedText);
-      while (pos !== -1) {
-        decorations.push(
-          Decoration.mark({ class: 'cm-match-highlight' }).range(pos, pos + selectedText.length)
-        );
-        pos = docText.indexOf(selectedText, pos + 1);
-      }
-
-      // Build the decoration set and update editor state
-      const decorationSet = Decoration.set(decorations, true);
-      update.view.dispatch({ effects: setHighlights.of(decorationSet) });
+      // Search the complete source document, including text outside
+      // rendered table cells.
+      this.applySourceHighlights(update.view, selectedText);
 
       // In Live Preview, tables are rendered after the CodeMirror update.
       // Wait one frame so the visible table DOM is ready.
