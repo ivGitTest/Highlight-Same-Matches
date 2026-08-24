@@ -2,6 +2,14 @@
 
 An Obsidian plugin that automatically highlights every occurrence of your selected text throughout the current note — just like Notepad++ does.
 
+---
+
+![GitHub Release](https://img.shields.io/github/v/release/ivGitTest/Highlight-Same-Matches)
+![GitHub Release Date](https://img.shields.io/github/release-date/ivGitTest/Highlight-Same-Matches)
+![GitHub Discussions (all)](https://img.shields.io/github/discussions/all/ivGitTest/Highlight-Same-Matches)
+
+---
+
 ## Demo
 
 ### Color setting
@@ -61,6 +69,10 @@ Switch to **Source mode** to highlight matches inside tables.
 1. Clone this repository into your vault's `.obsidian/plugins/` directory
 2. Rebuild or copy the built `main.js`, `styles.css`, and `manifest.json` into the plugin folder
 3. Enable the plugin in Obsidian Settings → Community Plugins
+
+### Disscussion
+
+Please, leave feedback or suggest an idea what is important for you to develope the app. Share you wishes!
 
 ## License
 
