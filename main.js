@@ -25,6 +25,8 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
     console.log('Loading highlight matches plugin...');
     this.domHighlights = [];
     this.activeView = null;
+    this.domHighlightFrame = null;
+    this.cssHighlightName = 'highlight-same-matches';
 
     // Register editor extensions in Obsidian
     this.registerEditorExtension([
@@ -40,14 +42,18 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
       const anchor = browserSelection?.anchorNode;
       const selectedText = browserSelection?.toString().trim();
 
-      if (!view || !anchor || !selectedText || !view.dom.contains(anchor)) return;
+      if (!view) return;
+      if (
+        !anchor ||
+        !selectedText ||
+        selectedText.length < 2 ||
+        !view.dom.contains(anchor)
+      ) {
+        this.clearDomHighlights();
+        return;
+      }
 
-      const inTable = anchor.parentElement?.closest('table, .cm-table-widget');
-      if (!inTable) return;
-
-      window.requestAnimationFrame(() => {
-        this.highlightTableWidgets(view, selectedText);
-      });
+      this.scheduleVisibleHighlights(view, selectedText);
     });
   }
 
@@ -57,6 +63,15 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
   }
 
   clearDomHighlights() {
+    if (this.domHighlightFrame !== null) {
+      window.cancelAnimationFrame(this.domHighlightFrame);
+      this.domHighlightFrame = null;
+    }
+
+    if (this.supportsCssHighlights()) {
+      CSS.highlights.delete(this.cssHighlightName);
+    }
+
     for (const highlight of this.domHighlights ?? []) {
       const parent = highlight.parentNode;
       if (!parent) continue;
@@ -69,46 +84,93 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
     this.domHighlights = [];
   }
 
-  highlightTableWidgets(view, selectedText) {
+  supportsCssHighlights() {
+    return (
+      typeof CSS !== 'undefined' &&
+      CSS.highlights &&
+      typeof Highlight !== 'undefined'
+    );
+  }
+
+  highlightVisibleContent(view, selectedText) {
     this.clearDomHighlights();
     if (!selectedText) return;
 
-    const widgets = view.dom.querySelectorAll('table, .cm-table-widget');
-    for (const widget of widgets) {
-      const walker = document.createTreeWalker(widget, NodeFilter.SHOW_TEXT);
-      const textNodes = [];
-      let node;
+    // Live Preview renders Markdown blocks through several different DOM
+    // implementations. Walking the whole editor is more reliable than
+    // depending on one internal table-widget class.
+    const walker = document.createTreeWalker(view.dom, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    let node;
 
-      while ((node = walker.nextNode())) {
-        if (node.parentElement?.closest('.cm-match-highlight')) continue;
-        textNodes.push(node);
+    while ((node = walker.nextNode())) {
+      if (
+        node.parentElement?.closest(
+          '.cm-match-highlight, script, style, textarea'
+        )
+      ) {
+        continue;
       }
+      textNodes.push(node);
+    }
 
-      for (let textNode of textNodes) {
-        const text = textNode.nodeValue ?? '';
-        let start = text.indexOf(selectedText);
+    const ranges = [];
+    for (const textNode of textNodes) {
+      const text = textNode.nodeValue ?? '';
+      let start = text.indexOf(selectedText);
 
-        while (start !== -1) {
-          const end = start + selectedText.length;
-          const range = document.createRange();
-          range.setStart(textNode, start);
-          range.setEnd(textNode, end);
-
-          const highlight = document.createElement('span');
-          highlight.className = 'cm-match-highlight';
-          highlight.dataset.highlightSameMatches = 'true';
-          range.surroundContents(highlight);
-          this.domHighlights.push(highlight);
-
-          // The text node was split by surroundContents; continue with
-          // the remaining text node after the inserted highlight.
-          const nextTextNode = highlight.nextSibling;
-          if (!nextTextNode || nextTextNode.nodeType !== Node.TEXT_NODE) break;
-          textNode = nextTextNode;
-          start = textNode.nodeValue?.indexOf(selectedText) ?? -1;
-        }
+      while (start !== -1) {
+        const range = document.createRange();
+        range.setStart(textNode, start);
+        range.setEnd(textNode, start + selectedText.length);
+        ranges.push(range);
+        start = text.indexOf(selectedText, start + 1);
       }
     }
+
+    // The Custom Highlight API paints ranges above rendered Markdown without
+    // changing Obsidian's table DOM. That is essential for Live Preview.
+    if (this.supportsCssHighlights()) {
+      CSS.highlights.set(this.cssHighlightName, new Highlight(...ranges));
+      return;
+    }
+
+    // Fallback for older Obsidian/Electron versions without CSS.highlights.
+    for (let textNode of textNodes) {
+      const text = textNode.nodeValue ?? '';
+      let start = text.indexOf(selectedText);
+
+      while (start !== -1) {
+        const end = start + selectedText.length;
+        const range = document.createRange();
+        range.setStart(textNode, start);
+        range.setEnd(textNode, end);
+
+        const highlight = document.createElement('span');
+        highlight.className = 'cm-match-highlight';
+        highlight.dataset.highlightSameMatches = 'true';
+        range.surroundContents(highlight);
+        this.domHighlights.push(highlight);
+
+        // The text node was split by surroundContents; continue with
+        // the remaining text node after the inserted highlight.
+        const nextTextNode = highlight.nextSibling;
+        if (!nextTextNode || nextTextNode.nodeType !== Node.TEXT_NODE) break;
+        textNode = nextTextNode;
+        start = textNode.nodeValue?.indexOf(selectedText) ?? -1;
+      }
+    }
+  }
+
+  scheduleVisibleHighlights(view, selectedText) {
+    if (this.domHighlightFrame !== null) {
+      window.cancelAnimationFrame(this.domHighlightFrame);
+    }
+
+    this.domHighlightFrame = window.requestAnimationFrame(() => {
+      this.domHighlightFrame = null;
+      this.highlightVisibleContent(view, selectedText);
+    });
   }
 
   createHighlightExtension() {
@@ -156,9 +218,7 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
 
       // In Live Preview, tables are rendered after the CodeMirror update.
       // Wait one frame so the visible table DOM is ready.
-      window.requestAnimationFrame(() => {
-        this.highlightTableWidgets(update.view, selectedText);
-      });
+      this.scheduleVisibleHighlights(update.view, selectedText);
     });
   }
 };
