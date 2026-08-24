@@ -2,13 +2,18 @@
 
 An Obsidian plugin that automatically highlights every occurrence of your selected text throughout the current note — just like Notepad++ does.
 
----
+<p>
+  <img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json&amp;query=%24%5B%22highlight-matches%22%5D.downloads&amp;label=downloads&amp;logo=obsidian&amp;color=7C3AED" alt="Downloads" vspace="10">
+  <img src="https://img.shields.io/github/v/release/ivGitTest/Highlight-Same-Matches" alt="GitHub release" vspace="10">
+  <img src="https://img.shields.io/github/release-date/ivGitTest/Highlight-Same-Matches" alt="Release date" vspace="10">
+  <img src="https://img.shields.io/github/license/ivGitTest/Highlight-Same-Matches" alt="License" vspace="10">
+  <br clear="both">
+</p>
 
-![GitHub Release](https://img.shields.io/github/v/release/ivGitTest/Highlight-Same-Matches)
-![GitHub Release Date](https://img.shields.io/github/release-date/ivGitTest/Highlight-Same-Matches)
-![GitHub Discussions (all)](https://img.shields.io/github/discussions/all/ivGitTest/Highlight-Same-Matches)
 
----
+## Disscussion
+
+Please, leave feedback or suggest an idea what is important for you to develope the app. Share you wishes!
 
 ## Demo
 
@@ -69,10 +74,6 @@ Switch to **Source mode** to highlight matches inside tables.
 1. Clone this repository into your vault's `.obsidian/plugins/` directory
 2. Rebuild or copy the built `main.js`, `styles.css`, and `manifest.json` into the plugin folder
 3. Enable the plugin in Obsidian Settings → Community Plugins
-
-### Disscussion
-
-Please, leave feedback or suggest an idea what is important for you to develope the app. Share you wishes!
 
 ## License
 
