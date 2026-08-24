@@ -36,7 +36,7 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
     // Register editor extensions in Obsidian
     this.registerEditorExtension([
       highlightField,
-      this.createHighlightExtension()
+      ...this.createHighlightExtension()
     ]);
   }
 
@@ -70,20 +70,25 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
   }
 
   createHighlightExtension() {
-    return ViewPlugin.define((view) => {
+    const viewTracker = ViewPlugin.define((view) => {
       this.editorViews.add(view);
 
       return {
-        update: (update) => {
-          if (update.selectionSet || update.docChanged) {
-            this.updateHighlights(update.view);
-          }
-        },
         destroy: () => {
           this.editorViews.delete(view);
         }
       };
     });
+
+    const updateListener = EditorView.updateListener.of((update) => {
+      // Dispatching from an update listener is safe because the editor update
+      // has finished. ViewPlugin.update must not dispatch nested transactions.
+      if (update.selectionSet || update.docChanged) {
+        this.updateHighlights(update.view);
+      }
+    });
+
+    return [viewTracker, updateListener];
   }
 
   updateHighlights(view) {
