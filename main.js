@@ -23,6 +23,7 @@ const highlightField = StateField.define({
 module.exports = class HighlightMatchesPlugin extends Plugin {
   async onload() {
     console.log('Loading highlight matches plugin...');
+    this.domHighlights = [];
 
     // Register editor extensions in Obsidian
     this.registerEditorExtension([
@@ -32,7 +33,63 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
   }
 
   onunload() {
+    this.clearDomHighlights();
     console.log('Unloading highlight matches plugin.');
+  }
+
+  clearDomHighlights() {
+    for (const highlight of this.domHighlights ?? []) {
+      const parent = highlight.parentNode;
+      if (!parent) continue;
+
+      while (highlight.firstChild) {
+        parent.insertBefore(highlight.firstChild, highlight);
+      }
+      parent.removeChild(highlight);
+    }
+    this.domHighlights = [];
+  }
+
+  highlightTableWidgets(view, selectedText) {
+    this.clearDomHighlights();
+    if (!selectedText) return;
+
+    const widgets = view.dom.querySelectorAll('.cm-table-widget');
+    for (const widget of widgets) {
+      const walker = document.createTreeWalker(widget, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      let node;
+
+      while ((node = walker.nextNode())) {
+        if (node.parentElement?.closest('.cm-match-highlight')) continue;
+        textNodes.push(node);
+      }
+
+      for (let textNode of textNodes) {
+        const text = textNode.nodeValue ?? '';
+        let start = text.indexOf(selectedText);
+
+        while (start !== -1) {
+          const end = start + selectedText.length;
+          const range = document.createRange();
+          range.setStart(textNode, start);
+          range.setEnd(textNode, end);
+
+          const highlight = document.createElement('span');
+          highlight.className = 'cm-match-highlight';
+          highlight.dataset.highlightSameMatches = 'true';
+          range.surroundContents(highlight);
+          this.domHighlights.push(highlight);
+
+          // The text node was split by surroundContents; continue with
+          // the remaining text node after the inserted highlight.
+          const nextTextNode = highlight.nextSibling;
+          if (!nextTextNode || nextTextNode.nodeType !== Node.TEXT_NODE) break;
+          textNode = nextTextNode;
+          start = textNode.nodeValue?.indexOf(selectedText) ?? -1;
+        }
+      }
+    }
   }
 
   createHighlightExtension() {
@@ -45,6 +102,7 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
 
       // If nothing is selected — clear highlights
       if (selection.empty) {
+        this.clearDomHighlights();
         update.view.dispatch({ effects: setHighlights.of(Decoration.none) });
         return;
       }
@@ -54,6 +112,7 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
 
       // Don't highlight single characters or whitespace
       if (selectedText.length < 2) {
+        this.clearDomHighlights();
         update.view.dispatch({ effects: setHighlights.of(Decoration.none) });
         return;
       }
@@ -73,6 +132,11 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
       // Build the decoration set and update editor state
       const decorationSet = Decoration.set(decorations, true);
       update.view.dispatch({ effects: setHighlights.of(decorationSet) });
+
+      // In Live Preview, table cells are rendered by a DOM widget rather
+      // than by the source text decorations above. Highlight those visible
+      // cells as well.
+      this.highlightTableWidgets(update.view, selectedText);
     });
   }
 };

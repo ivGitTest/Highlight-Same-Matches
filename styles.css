@@ -4,3 +4,10 @@
   border-bottom: 2px solid gold;
   border-radius: 2px;
 }
+
+/* The same class is used for rendered Live Preview table cells. */
+[data-highlight-same-matches='true'] {
+  background-color: rgba(255, 215, 0, 0.3);
+  border-bottom: 2px solid gold;
+  border-radius: 2px;
+}
