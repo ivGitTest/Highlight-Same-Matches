@@ -113,12 +113,13 @@ module.exports = class HighlightMatchesPlugin extends Plugin {
 
   createHighlightExtension() {
     return EditorView.updateListener.of((update) => {
+      this.activeView = update.view;
+
       // Only trigger on selection change or text editing
       if (!update.selectionSet && !update.docChanged) return;
 
       const state = update.state;
       const selection = state.selection.main;
-      this.activeView = update.view;
 
       // If nothing is selected — clear highlights
       if (selection.empty) {
