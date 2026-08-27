@@ -7,6 +7,8 @@ An Obsidian plugin that automatically highlights every occurrence of your select
   <img src="https://img.shields.io/github/v/release/ivGitTest/Highlight-Same-Matches" alt="GitHub release" vspace="10">
   <img src="https://img.shields.io/github/release-date/ivGitTest/Highlight-Same-Matches" alt="Release date" vspace="10">
   <img src="https://img.shields.io/github/license/ivGitTest/Highlight-Same-Matches" alt="License" vspace="10">
+  <img src="https://img.shields.io/github/discussions/all/ivGitTest/Highlight-Same-Matches" alt="License" vspace="10">
+
   <br clear="both">
 </p>
 
